@@ -10,19 +10,24 @@ namespace Common
         {
         }
 
-        public SensorSample(double volume, double dHT, double bMP, double pressure, DateTime dateTime)
+        public SensorSample(double volume, double temperatureDHT, double temperatureBMP, double pressure, DateTime dateTime)
         {
             Volume = volume;
-            T_DHT = dHT;
-            T_BMP = bMP;
+            TemperatureDHT = temperatureDHT;
+            TemperatureBMP = temperatureBMP;
             Pressure = pressure;
             DateTime = dateTime;
         }
 
         [DataMember] public double Volume { get; set; }
-        [DataMember] public double T_DHT { get; set; }
-        [DataMember] public double T_BMP { get; set; }
+        [DataMember] public double TemperatureDHT { get; set; }
+        [DataMember] public double TemperatureBMP { get; set; }
         [DataMember] public double Pressure { get; set; }
         [DataMember] public DateTime DateTime { get; set; }
+
+        public override string ToString()
+        {
+            return $"{Volume},{TemperatureDHT},{TemperatureBMP},{Pressure},{DateTime}";
+        }
     }
 }
