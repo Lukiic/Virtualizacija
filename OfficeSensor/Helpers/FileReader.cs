@@ -1,12 +1,14 @@
 ﻿using Common;
 using System;
+using System.Collections.Generic;
 using System.IO;
 
 namespace OfficeSensor
 {
-    public class FileReader
+    public class FileReader : IDisposable
     {
         private StreamReader _reader;
+        private List<string> _invalidLines;
         private bool _disposed = false;
 
         public FileReader(string filePath)
@@ -15,6 +17,8 @@ namespace OfficeSensor
             {
                 _reader = new StreamReader(filePath);
                 _reader.ReadLine();     // Skipping header of CSV
+
+                _invalidLines = new List<string>();
             }
             else
                 _reader = null;
@@ -35,7 +39,7 @@ namespace OfficeSensor
         {
             if (!_disposed)
             {
-                if (disposing)
+                if (disposing && _reader != null)
                 {
                     _reader.Dispose();
                     _reader = null;
@@ -49,9 +53,11 @@ namespace OfficeSensor
             if (_disposed || _reader == null)
                 return (false, new SensorSample());
 
+            string line = string.Empty;
+
             try
             {
-                string line = _reader.ReadLine();
+                line = _reader.ReadLine();
 
                 if (string.IsNullOrEmpty(line))
                     return (false, new SensorSample());
@@ -62,14 +68,31 @@ namespace OfficeSensor
                     double.Parse(parts[3]),
                     double.Parse(parts[5]),
                     double.Parse(parts[4]),
-                    DateTime.Now);
+                    DateTime.Parse(parts[0]));
 
                 return (true, sensorSample);
             }
             catch
             {
+                _invalidLines.Add(line);
                 return (false, new SensorSample());
             }
+        }
+
+        public List<string> GetAllInvalidLines()
+        {
+            if (_invalidLines == null)
+                return new List<string>();
+
+            return _invalidLines;
+        }
+
+        public string GetAllRemainingText()
+        {
+            if (_disposed || _reader == null)
+                return string.Empty;
+
+            return _reader.ReadToEnd();
         }
     }
 }

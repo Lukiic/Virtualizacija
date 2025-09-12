@@ -6,9 +6,11 @@ namespace Common
     public interface ISensorService
     {
         [OperationContract]
+        [FaultContract(typeof(ValidationException))]
         ServerResponse StartSession(SensorSample meta);
 
         [OperationContract]
+        [FaultContract(typeof(ValidationException))]
         ServerResponse PushSample(SensorSample sensorSample);
 
         [OperationContract]
