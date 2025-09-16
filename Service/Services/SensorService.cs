@@ -15,9 +15,21 @@ namespace Service
         public event MyEventHandler OnTransferCompleted;
         public event MyEventHandler OnWarningRaised;
 
+        public event MyEventHandler VolumeSpike;
+        public event MyEventHandler OutOfBandWarning;
+        public event MyEventHandler TemperatureSpikeDHT;
+        public event MyEventHandler TemperatureSpikeBMP;
+
         private FileWriter _validDataFileWriter;
         private FileWriter _invalidDataFileWriter;
-        private SensorSample _lastSample;           // Comparing last sample values with current sample values and raise event if needed
+        private SensorSample _lastSample;
+        private int _sampleCount;
+        private double _volumeMean;
+
+        private double volumeThreshold = double.Parse(ConfigurationManager.AppSettings["V_threshold"]);
+        private double deviationPercent = double.Parse(ConfigurationManager.AppSettings["DeviationThresholdPercent"]);
+        private double temperatureDhtThreshold = double.Parse(ConfigurationManager.AppSettings["T_dht_threshold"]);
+        private double temperatureBmpThreshold = double.Parse(ConfigurationManager.AppSettings["T_bmp_threshold"]);
 
         public ServerResponse StartSession(SensorSample meta)
         {
@@ -31,7 +43,10 @@ namespace Service
             {
                 ValidateData(meta);     // Doesn't throw -> valid data
                 _validDataFileWriter.WriteSensorSample(meta);
+
                 _lastSample = meta;
+                _sampleCount = 1;
+                _volumeMean = meta.Volume;
             }
             catch (Exception ex)
             {
@@ -59,7 +74,9 @@ namespace Service
             {
                 ValidateData(sensorSample);     // Doesn't throw -> valid data
                 _validDataFileWriter.WriteSensorSample(sensorSample);
-                _lastSample = sensorSample;     // Before this compare sensorSample with _lastSample to check if event should be raised
+
+                CompareWithLastSample(sensorSample);
+                _lastSample = sensorSample;
             }
             catch (Exception ex)
             {
@@ -77,7 +94,6 @@ namespace Service
 
             return new ServerResponse(ResponseStatus.ACK, SessionStatus.IN_PROGRESS);
         }
-
 
         public ServerResponse EndSession()
         {
@@ -101,5 +117,45 @@ namespace Service
             if (sensorSample.DateTime > DateTime.Now)
                 throw new FaultException<ValidationException>(new ValidationException("DateTime", "Date and time cannot be in the future."));
         }
+
+        private void CompareWithLastSample(SensorSample newSensorSample)
+        {
+            if (_lastSample == null)
+                return;
+
+            CompareVolume(newSensorSample.Volume);
+            UpdateVolumeMean(newSensorSample.Volume);
+
+           
+            
+        }
+
+        private void CompareVolume(double newVolumeValue)
+        {
+            double previousVolumeValue = _lastSample.Volume;
+
+            double delta = newVolumeValue - previousVolumeValue;
+
+            if (delta > volumeThreshold && VolumeSpike != null)
+                VolumeSpike(this, new EventArgsWithMessage("Above expected value"));
+            else if (delta < -volumeThreshold && VolumeSpike != null)
+                VolumeSpike(this, new EventArgsWithMessage("Below expected value"));
+
+            if (newVolumeValue > (1 + deviationPercent / 100) * _volumeMean && OutOfBandWarning != null)
+                OutOfBandWarning(this, new EventArgsWithMessage("Above expected value"));
+
+            else if (newVolumeValue < (1 - deviationPercent / 100) * _volumeMean && OutOfBandWarning != null)
+                OutOfBandWarning(this, new EventArgsWithMessage("Below expected value"));
+        }
+
+        private void UpdateVolumeMean(double newVolumeValue)
+        {
+            ++_sampleCount;
+            _volumeMean += (newVolumeValue - _volumeMean) / _sampleCount;
+        }
+
+        
+
+        
     }
 }
