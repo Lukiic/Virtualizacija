@@ -126,8 +126,8 @@ namespace Service
             CompareVolume(newSensorSample.Volume);
             UpdateVolumeMean(newSensorSample.Volume);
 
-           
-            
+            CompareTemperatureDHT(newSensorSample.TemperatureDHT);
+            CompareTemperatureBMP(newSensorSample.TemperatureBMP);
         }
 
         private void CompareVolume(double newVolumeValue)
@@ -154,8 +154,28 @@ namespace Service
             _volumeMean += (newVolumeValue - _volumeMean) / _sampleCount;
         }
 
-        
+        private void CompareTemperatureDHT(double newTemperatureValue)
+        {
+            double previousTemperatureValue = _lastSample.TemperatureDHT;
 
-        
+            double delta = newTemperatureValue - previousTemperatureValue;
+
+            if (delta > temperatureDhtThreshold && TemperatureSpikeDHT != null)
+                TemperatureSpikeDHT(this, new EventArgsWithMessage("Above expected value"));
+            else if (delta < -temperatureDhtThreshold && TemperatureSpikeDHT != null)
+                TemperatureSpikeDHT(this, new EventArgsWithMessage("Below expected value"));
+        }
+
+        private void CompareTemperatureBMP(double newTemperatureValue)
+        {
+            double previousTemperatureValue = _lastSample.TemperatureBMP;
+
+            double delta = newTemperatureValue - previousTemperatureValue;
+
+            if (delta > temperatureBmpThreshold && TemperatureSpikeBMP != null)
+                TemperatureSpikeBMP(this, new EventArgsWithMessage("Above expected value"));
+            else if (delta < -temperatureBmpThreshold && TemperatureSpikeBMP != null)
+                TemperatureSpikeBMP(this, new EventArgsWithMessage("Below expected value"));
+        }
     }
 }
