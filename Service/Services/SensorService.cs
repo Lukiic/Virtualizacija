@@ -22,16 +22,17 @@ namespace Service
 
         private FileWriter _validDataFileWriter;
         private FileWriter _invalidDataFileWriter;
-        private SensorSample _lastSample;
-        private int _sampleCount;
-        private double _volumeMean;
+
+        private SensorSample _lastSample = null;
+        private int _sampleCount = 0;
+        private double _volumeMean = 0;
 
         private double volumeThreshold = double.Parse(ConfigurationManager.AppSettings["V_threshold"]);
         private double deviationPercent = double.Parse(ConfigurationManager.AppSettings["DeviationThresholdPercent"]);
         private double temperatureDhtThreshold = double.Parse(ConfigurationManager.AppSettings["T_dht_threshold"]);
         private double temperatureBmpThreshold = double.Parse(ConfigurationManager.AppSettings["T_bmp_threshold"]);
 
-        public ServerResponse StartSession(SensorSample meta)
+        public ServerResponse StartSession(params string[] meta)
         {
             if (OnTransferStarted != null)
                 OnTransferStarted(this, new EventArgsWithMessage("Transfer started."));
@@ -41,24 +42,16 @@ namespace Service
 
             try
             {
-                ValidateData(meta);     // Doesn't throw -> valid data
-                _validDataFileWriter.WriteSensorSample(meta);
+                string metaInCsvFormat = string.Join(",", meta);
 
-                _lastSample = meta;
-                _sampleCount = 1;
-                _volumeMean = meta.Volume;
+                _validDataFileWriter.WriteText(metaInCsvFormat);
+                _invalidDataFileWriter.WriteText(metaInCsvFormat);
             }
             catch (Exception ex)
             {
                 if (OnWarningRaised != null)
-                {
-                    if (ex is FaultException<ValidationException> fex)
-                        OnWarningRaised(this, new EventArgsWithMessage($"Warning raised: {fex.Detail}"));
-                    else
-                        OnWarningRaised(this, new EventArgsWithMessage($"Warning raised: {ex}"));
-                }
+                    OnWarningRaised(this, new EventArgsWithMessage($"Warning raised: {ex}"));
 
-                _invalidDataFileWriter.WriteSensorSample(meta);
                 throw ex;
             }
 
@@ -137,15 +130,14 @@ namespace Service
             double delta = newVolumeValue - previousVolumeValue;
 
             if (delta > volumeThreshold && VolumeSpike != null)
-                VolumeSpike(this, new EventArgsWithMessage("Above expected value"));
+                VolumeSpike(this, new EventArgsWithMessage("Volume warning (comparing with last value): Above expected value"));
             else if (delta < -volumeThreshold && VolumeSpike != null)
-                VolumeSpike(this, new EventArgsWithMessage("Below expected value"));
+                VolumeSpike(this, new EventArgsWithMessage("Volume warning (comparing with last value): Below expected value"));
 
             if (newVolumeValue > (1 + deviationPercent / 100) * _volumeMean && OutOfBandWarning != null)
-                OutOfBandWarning(this, new EventArgsWithMessage("Above expected value"));
-
+                OutOfBandWarning(this, new EventArgsWithMessage("Volume warning (comparing with mean value): Above expected value"));
             else if (newVolumeValue < (1 - deviationPercent / 100) * _volumeMean && OutOfBandWarning != null)
-                OutOfBandWarning(this, new EventArgsWithMessage("Below expected value"));
+                OutOfBandWarning(this, new EventArgsWithMessage("Volume warning (comparing with mean value): Below expected value"));
         }
 
         private void UpdateVolumeMean(double newVolumeValue)
@@ -161,9 +153,9 @@ namespace Service
             double delta = newTemperatureValue - previousTemperatureValue;
 
             if (delta > temperatureDhtThreshold && TemperatureSpikeDHT != null)
-                TemperatureSpikeDHT(this, new EventArgsWithMessage("Above expected value"));
+                TemperatureSpikeDHT(this, new EventArgsWithMessage("TemperatureDHT warning (comparing with last value): Above expected value"));
             else if (delta < -temperatureDhtThreshold && TemperatureSpikeDHT != null)
-                TemperatureSpikeDHT(this, new EventArgsWithMessage("Below expected value"));
+                TemperatureSpikeDHT(this, new EventArgsWithMessage("TemperatureDHT warning (comparing with last value): Below expected value"));
         }
 
         private void CompareTemperatureBMP(double newTemperatureValue)
@@ -173,9 +165,9 @@ namespace Service
             double delta = newTemperatureValue - previousTemperatureValue;
 
             if (delta > temperatureBmpThreshold && TemperatureSpikeBMP != null)
-                TemperatureSpikeBMP(this, new EventArgsWithMessage("Above expected value"));
+                TemperatureSpikeBMP(this, new EventArgsWithMessage("TemperatureBMP warning (comparing with last value): Above expected value"));
             else if (delta < -temperatureBmpThreshold && TemperatureSpikeBMP != null)
-                TemperatureSpikeBMP(this, new EventArgsWithMessage("Below expected value"));
+                TemperatureSpikeBMP(this, new EventArgsWithMessage("TemperatureBMP warning (comparing with last value): Below expected value"));
         }
     }
 }

@@ -15,7 +15,7 @@ namespace OfficeSensor
             ISensorService proxy = factory.CreateChannel();
             FileReader fileReader = new FileReader(ConfigurationManager.AppSettings["dataCsvFile"]);
 
-            StartSessionWithServer(proxy, fileReader);
+            StartSessionWithServer(proxy);
 
             for (int i = 0; i < 100; ++i)
             {
@@ -30,24 +30,16 @@ namespace OfficeSensor
             fileReader.Dispose();
         }
 
-        private static void StartSessionWithServer(ISensorService proxy, FileReader fileReader)
+        private static void StartSessionWithServer(ISensorService proxy)
         {
-            (bool isSuccessful, SensorSample sensorSample) = fileReader.GetSensorSample();
-
-            if (!isSuccessful)
-            {
-                Console.WriteLine("No data for reading.");
-                return;
-            }
-
             try
             {
-                ServerResponse serverResponse = proxy.StartSession(sensorSample);   // As meta data
+                ServerResponse serverResponse = proxy.StartSession("Volume", "T_DHT", "T_BMP", "Pressure", "DateTime");
 
                 if (serverResponse.ResponseStatus == ResponseStatus.ACK && serverResponse.SessionStatus == SessionStatus.IN_PROGRESS)
                     Console.WriteLine("Session with server successfully started");
             }
-            catch (FaultException<ValidationException> ex)
+            catch (Exception ex)
             {
                 Console.WriteLine(ex);
             }
@@ -73,6 +65,10 @@ namespace OfficeSensor
             catch (FaultException<ValidationException> ex)
             {
                 Console.WriteLine(ex.Detail);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
             }
         }
 

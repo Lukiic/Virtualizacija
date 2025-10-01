@@ -6,8 +6,7 @@ namespace Common
     public interface ISensorService
     {
         [OperationContract]
-        [FaultContract(typeof(ValidationException))]
-        ServerResponse StartSession(SensorSample meta);
+        ServerResponse StartSession(params string[] meta);
 
         [OperationContract]
         [FaultContract(typeof(ValidationException))]

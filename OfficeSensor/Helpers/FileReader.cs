@@ -26,7 +26,7 @@ namespace OfficeSensor
 
         ~FileReader()
         {
-            Dispose(false);     // Not necessary but following Dispose design pattern
+            Dispose(false);
         }
 
         public void Dispose()

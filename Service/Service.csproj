@@ -46,6 +46,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="EventArguments\EventArgsWithMessage.cs" />
+    <Compile Include="Helpers\EventPublishers.cs" />
     <Compile Include="Helpers\FileWriter.cs" />
     <Compile Include="Services\SensorService.cs" />
     <Compile Include="ServiceProgram.cs" />
